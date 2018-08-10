@@ -15,15 +15,25 @@ public class WebSocketClient {
     
     let client: NetworkClient
     
+    var closed = false
+    
     public init(client: NetworkClient) {
         self.client = client
     }
     
     deinit {
+        self.stop()
+    }
+    
+    public func stop() {
+        guard !closed else { return }
+        closed = true
         let _ = client.write(data: Data(bytes: [UInt8(0x88), UInt8(0x0)]))
+        client.stop()
     }
     
     public func read() -> String? {
+        guard !closed else { return nil }
         guard let c1: UInt8 = client.read() else { return nil }
         let finalFragment: Bool = (c1 >> 7) == 1
         guard finalFragment else { return nil }
@@ -87,6 +97,7 @@ public class WebSocketClient {
     }
     
     public func write(_ string: String) -> Bool {
+        guard !closed else { return false }
         var bytes = [UInt8]()
         bytes.append(0x81)
         let utf8 = [UInt8](string.utf8)
