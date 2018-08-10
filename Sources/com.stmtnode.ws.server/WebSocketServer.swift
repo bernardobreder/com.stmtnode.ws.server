@@ -1,0 +1,89 @@
+//
+//  WebSocketServer.swift
+//  MovappingShell
+//
+//  Created by Bernardo Breder on 31/07/17.
+//  Copyright © 2017 com.movapping. All rights reserved.
+//
+
+import Foundation
+#if SWIFT_PACKAGE
+import com_stmtnode_net
+import com_stmtnode_secure
+#endif
+
+public class WebSocketServer {
+    
+    let server: NetworkServer
+    
+    public init?(port: Int) {
+        guard let server = NetworkServer(port: port) else { return nil }
+        self.server = server
+    }
+    
+    public func client() -> WebSocketClient? {
+        guard let client = server.client() else { return nil }
+        guard let request = client.readHttpRequest() else { return nil }
+//        let SecWebSocketKey1 = "Sec-WebSocket-Key1".lowercased()
+//        let SecWebSocketKey2 = "Sec-WebSocket-Key2".lowercased()
+        let SecWebSocketKey = "Sec-WebSocket-Key".lowercased()
+//        if let key1 = request.headers[SecWebSocketKey1], let key2 = request.headers[SecWebSocketKey2] {
+//            guard let origin = request.headers["origin"] else { return nil }
+//            guard let host = request.headers["host"] else { return nil }
+//            let keys = [key1, key2]
+//            var numbers = ["", ""]
+//            var spaces = [0, 0]
+//            let digits = NSCharacterSet.decimalDigits
+//            for i in 0 ..< keys.count {
+//                let key = keys[i]
+//                var number = numbers[i]
+//                key.unicodeScalars.forEach({ c in
+//                    if digits.hasMember(inPlane: UInt8(c.value)) {
+//                        number += String(c)
+//                    } else if c == " ".unicodeScalars.first! {
+//                        spaces[i] += 1
+//                    }
+//                })
+//                numbers[i] = number
+//            }
+//            var bytes = [UInt8]()
+//            for i in 0 ..< keys.count {
+//                guard var value = Int(numbers[i]) else { return nil }
+//                value /= spaces[i]
+//                bytes.append(UInt8((value >> 24) & 0xFF))
+//                bytes.append(UInt8((value >> 16) & 0xFF))
+//                bytes.append(UInt8((value >> 08) & 0xFF))
+//                bytes.append(UInt8((value >> 00) & 0xFF))
+//            }
+//            for _ in 0 ..< 8 {
+//                guard let byte = client.read() else { return nil }
+//                bytes.append(byte)
+//            }
+//            guard let string = String(bytes: bytes, encoding: String.Encoding.ascii) else { return nil }
+//            var response = ""
+//            response.append("HTTP/1.1 101 WebSocket Protocol Handshake\r\n")
+//            response.append("Upgrade: Websocket\r\n")
+//            response.append("Connection: Upgrade\r\n")
+//            response.append("Sec-WebSocket-Origin: \(origin)\r\n")
+//            response.append("Sec-WebSocket-Location: ws://\(host)\r\n")
+//            response.append("\r\n")
+//            response.append(string.md5())
+//            guard let data = response.data(using: .utf8) else { return nil }
+//            guard client.write(data: data) else { return nil }
+        if let key = request.headers[SecWebSocketKey] {
+            let bytes = [UInt8]((key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").utf8)
+            let accept = Data(bytes: bytes.sha1()).base64EncodedString()
+            
+            var response = ""
+            response.append("HTTP/1.1 101 Switching Protocols\r\n")
+            response.append("Upgrade: Websocket\r\n")
+            response.append("Connection: Upgrade\r\n")
+            response.append("Sec-WebSocket-Accept: \(accept)\r\n")
+            response.append("\r\n")
+            guard let data = response.data(using: .utf8) else { return nil }
+            guard client.write(data: data) else { return nil }
+            return WebSocketClient(client: client)
+        } else { return nil }
+    }
+    
+}
