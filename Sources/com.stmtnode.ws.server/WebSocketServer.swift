@@ -58,13 +58,13 @@ public class WebSocketServer: NetworkThread {
     
     public func client() -> WebSocketClient? {
         guard let client = server.client() else { return nil }
-        guard let request = client.readHttpRequest() else { return nil }
+        guard let request = client.readWsRequest() else { return nil }
         let SecWebSocketKey1 = "Sec-WebSocket-Key1".lowercased()
         let SecWebSocketKey2 = "Sec-WebSocket-Key2".lowercased()
         let SecWebSocketKey = "Sec-WebSocket-Key".lowercased()
-        if let key1 = request.headers[SecWebSocketKey1], let key2 = request.headers[SecWebSocketKey2] {
-            guard let origin = request.headers["origin"] else { return nil }
-            guard let host = request.headers["host"] else { return nil }
+        if let key1 = request[SecWebSocketKey1], let key2 = request[SecWebSocketKey2] {
+            guard let origin = request["origin"] else { return nil }
+            guard let host = request["host"] else { return nil }
             let keys = [key1, key2]
             var numbers = ["", ""]
             var spaces = [0, 0]
@@ -106,7 +106,7 @@ public class WebSocketServer: NetworkThread {
             guard let data = response.data(using: .utf8) else { return nil }
             guard client.write(data: data) else { return nil }
             return WebSocketClient(client: client)
-        } else if let key = request.headers[SecWebSocketKey] {
+        } else if let key = request[SecWebSocketKey] {
             let bytes = [UInt8]((key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").utf8)
             let accept = Data(bytes: bytes.sha1()).base64EncodedString()
             
@@ -124,50 +124,31 @@ public class WebSocketServer: NetworkThread {
     
 }
 
-public struct HttpRequest {
-    
-    public let method: String
-    
-    public let protocolVersion: String
+public struct HttpWsRequest {
     
     public let query: String
     
     public let headers: [String: String]
     
-    public let data: Data
-    
 }
 
 extension NetworkClient {
     
-    public func readHttpRequest() -> HttpRequest? {
-        var buffer = ""
+    public func readWsRequest() -> [String: String]? {
+        let buffer = NSMutableString(capacity: 256)
         while true {
             guard let byte = read() else { return nil }
-            buffer += String(Character(UnicodeScalar(byte)))
+            buffer.append(String(Character(UnicodeScalar(byte))))
             if buffer.hasSuffix("\r\n\r\n") { break }
         }
-        var lines = [String]()
-        buffer.trimmingCharacters(in: .newlines).enumerateLines(invoking: { (line, stop) in
-            lines.append(line)
-        })
-        guard let first = lines.first else { return nil }
-        var firsts = first.split(separator: " ")
-        guard let proto = firsts.popLast() else { return nil }
-        guard let query = firsts.popLast() else { return nil }
-        guard let method = firsts.popLast() else { return nil }
         var headers = [String: String]()
-        for line in lines.dropFirst() {
+        for line in buffer.trimmingCharacters(in: .newlines).split(separator: "\r\n").dropFirst() {
             guard let index = line.index(of: ":") else { return nil }
-            let key = line[..<index]
-            let value = line[line.index(index, offsetBy: 2)...]
-            headers[key.lowercased()] = String(value)
+            let key = line[..<index].trimmingCharacters(in: .whitespaces)
+            let value = line[line.index(index, offsetBy: 2)...].trimmingCharacters(in: .whitespaces)
+            headers[key.lowercased()] = value
         }
-        let contentLength = Int(Double(headers["content-length"] ?? "0") ?? 0.0)
-        var data = Data(capacity: contentLength)
-        guard let buf = read(count: contentLength) else { return nil }
-        data.append(contentsOf: buf)
-        return HttpRequest(method: String(method), protocolVersion: String(proto), query: String(query), headers: headers, data: data)
+        return headers
     }
     
 }
