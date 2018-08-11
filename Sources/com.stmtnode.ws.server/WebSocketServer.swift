@@ -124,14 +124,6 @@ public class WebSocketServer: NetworkThread {
     
 }
 
-public struct HttpWsRequest {
-    
-    public let query: String
-    
-    public let headers: [String: String]
-    
-}
-
 extension NetworkClient {
     
     public func readWsRequest() -> [String: String]? {
