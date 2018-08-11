@@ -18,7 +18,7 @@ public protocol WebSocketProtocol {
     
 }
 
-public class WebSocketServer: NetworkThread {
+open class WebSocketServer: NetworkThread {
     
     let server: NetworkServer
     
@@ -56,7 +56,7 @@ public class WebSocketServer: NetworkThread {
         server.stop()
     }
     
-    public func client() -> WebSocketClient? {
+    fileprivate func client() -> WebSocketClient? {
         guard let client = server.client() else { return nil }
         guard let request = client.readWsRequest() else { return nil }
         let SecWebSocketKey1 = "Sec-WebSocket-Key1".lowercased()
