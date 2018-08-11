@@ -26,10 +26,6 @@ open class WebSocketServer: NetworkThread {
     
     let queue: DispatchQueue
     
-    var closed = false
-    
-    var started = false
-    
     public init?(port: Int, model: WebSocketProtocol, queue: DispatchQueue) {
         guard let server = NetworkServer(port: port) else { return nil }
         self.server = server
