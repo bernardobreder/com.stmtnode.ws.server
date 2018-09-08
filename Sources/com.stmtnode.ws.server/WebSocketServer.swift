@@ -1,15 +1,9 @@
-//
-//  WebSocketServer.swift
-//  MovappingShell
-//
-//  Created by Bernardo Breder on 31/07/17.
-//  Copyright © 2017 com.movapping. All rights reserved.
-//
 
 import Foundation
 #if SWIFT_PACKAGE
 import com_stmtnode_net
 import com_stmtnode_secure
+import com_stmtnode_string
 #endif
 
 public protocol WebSocketProtocol {
@@ -123,14 +117,14 @@ open class WebSocketServer: NetworkThread {
 extension NetworkClient {
     
     public func readWsRequest() -> [String: String]? {
-        let buffer = NSMutableString(capacity: 256)
+        let sb = StringBuilder()
         while true {
             guard let byte = read() else { return nil }
-            buffer.append(String(Character(UnicodeScalar(byte))))
-            if buffer.hasSuffix("\r\n\r\n") { break }
+            sb.append(String(Character(UnicodeScalar(byte))))
+            if sb.string.hasSuffix("\r\n\r\n") { break }
         }
         var headers = [String: String]()
-        for line in buffer.trimmingCharacters(in: .newlines).split(separator: "\r\n").dropFirst() {
+        for line in sb.string.trimmingCharacters(in: .newlines).split(separator: "\r\n").dropFirst() {
             guard let index = line.index(of: ":") else { return nil }
             let key = line[..<index].trimmingCharacters(in: .whitespaces)
             let value = line[line.index(index, offsetBy: 2)...].trimmingCharacters(in: .whitespaces)
