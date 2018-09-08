@@ -33,7 +33,7 @@ open class WebSocketServer: NetworkThread {
         self.queue = queue
     }
     
-    open override func run() {
+    open override func loop() {
         if let client = self.client() {
             queue.async {
                 while !client.closed {
