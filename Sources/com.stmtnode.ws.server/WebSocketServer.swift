@@ -58,10 +58,10 @@ open class WebSocketServer: NetworkThread {
         }
     }
     
-    public func send(broadcast message: String) {
+    public func closeAll() {
         lock.lock {
             for client in clients {
-                let _ = client.write(message)
+                let _ = client.stop()
             }
         }
     }
