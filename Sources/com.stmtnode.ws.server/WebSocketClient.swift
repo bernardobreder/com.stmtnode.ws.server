@@ -13,11 +13,14 @@ import com_stmtnode_net
 
 public class WebSocketClient {
     
-    let client: NetworkClient
+    public let id: Int
     
-    var closed = false
+    public let client: NetworkClient
     
-    public init(client: NetworkClient) {
+    public var closed = false
+    
+    public init(id: Int, client: NetworkClient) {
+        self.id = id
         self.client = client
     }
     

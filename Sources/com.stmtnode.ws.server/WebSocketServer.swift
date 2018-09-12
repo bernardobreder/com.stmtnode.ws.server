@@ -4,6 +4,7 @@ import Foundation
 import com_stmtnode_net
 import com_stmtnode_secure
 import com_stmtnode_string
+import com_stmtnode_lock
 #endif
 
 public protocol WebSocketProtocol {
@@ -14,11 +15,17 @@ public protocol WebSocketProtocol {
 
 open class WebSocketServer: NetworkThread {
     
-    let server: NetworkServer
+    public let server: NetworkServer
     
-    let model: WebSocketProtocol
+    public let model: WebSocketProtocol
     
-    let queue: DispatchQueue
+    public let queue: DispatchQueue
+    
+    public let lock = Lock()
+    
+    public var clients = [WebSocketClient]()
+    
+    fileprivate var clientSequence = 1
     
     public init?(port: Int, model: WebSocketProtocol, queue: DispatchQueue) {
         guard let server = NetworkServer(port: port) else { return nil }
@@ -29,15 +36,32 @@ open class WebSocketServer: NetworkThread {
     
     open override func loop() {
         if let client = self.client() {
+            lock.lock { clients.append(client) }
             queue.async {
+                defer { client.stop() }
                 while !client.closed {
-                    if let message = client.read() {
-                        guard let response = try? self.model.perform(request: message) else { return client.stop() }
-                        guard client.write(response) else { return client.stop() }
-                    } else {
-                        Thread.sleep(forTimeInterval: 0.1)
+                    autoreleasepool(invoking: { () -> () in
+                        if let message = client.read() {
+                            guard let response = try? self.model.perform(request: message) else { return client.stop() }
+                            guard client.write(response) else { return client.stop() }
+                        } else {
+                            Thread.sleep(forTimeInterval: 0.1)
+                        }
+                    })
+                }
+                self.lock.lock {
+                    if let index = self.clients.index(where: {$0 === client}) {
+                        self.clients.remove(at: index)
                     }
                 }
+            }
+        }
+    }
+    
+    public func send(broadcast message: String) {
+        lock.lock {
+            for client in clients {
+                let _ = client.write(message)
             }
         }
     }
@@ -47,6 +71,8 @@ open class WebSocketServer: NetworkThread {
     }
     
     fileprivate func client() -> WebSocketClient? {
+        let id = clientSequence
+        self.clientSequence += 1
         guard let client = server.client() else { return nil }
         guard let request = client.readWsRequest() else { return nil }
         let SecWebSocketKey1 = "Sec-WebSocket-Key1".lowercased()
@@ -95,7 +121,7 @@ open class WebSocketServer: NetworkThread {
             response.append(string.md5())
             guard let data = response.data(using: .utf8) else { return nil }
             guard client.write(data: data) else { return nil }
-            return WebSocketClient(client: client)
+            return WebSocketClient(id: id, client: client)
         } else if let key = request[SecWebSocketKey] {
             let bytes = [UInt8]((key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").utf8)
             let accept = Data(bytes: bytes.sha1()).base64EncodedString()
@@ -108,7 +134,7 @@ open class WebSocketServer: NetworkThread {
             response.append("\r\n")
             guard let data = response.data(using: .utf8) else { return nil }
             guard client.write(data: data) else { return nil }
-            return WebSocketClient(client: client)
+            return WebSocketClient(id: id, client: client)
         } else { return nil }
     }
     
