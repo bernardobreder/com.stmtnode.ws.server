@@ -9,7 +9,7 @@ final class com_stmtnode_ws_serverTests: XCTestCase, WebSocketProtocol {
     
     
     func testExample() throws {
-        guard let server = WebSocketServer(port: 9090, model: self, queue: DispatchQueue.global()) else { throw NSError() }
+        guard let server = WebSocketServer(port: 9090, model: self) else { throw NSError() }
         server.start()
 //        Thread.sleep(forTimeInterval: 1000000)
         server.stop()
