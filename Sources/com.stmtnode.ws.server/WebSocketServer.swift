@@ -19,19 +19,17 @@ open class WebSocketServer: NetworkThread {
     
     public let model: WebSocketProtocol
     
-    public let queue: DispatchQueue
-    
     public let lock = Lock()
     
     public var clients = [WebSocketClient]()
     
     fileprivate var clientSequence = 1
     
-    public init?(port: Int, model: WebSocketProtocol, queue: DispatchQueue) {
+    public init?(port: Int, model: WebSocketProtocol) {
         guard let server = NetworkServer(port: port) else { return nil }
         self.server = server
         self.model = model
-        self.queue = queue
+        super.init(name: "WebSocket:\(port)")
     }
     
     open override func loop() {
