@@ -32,23 +32,13 @@ open class WebSocketServer: NetworkThread {
         super.init(name: "WebSocket:\(port)")
     }
     
-    fileprivate func autorelease(_ block: () -> Void) {
-        #if os(Linux)
-        block()
-        #else
-        autoreleasepool(invoking: { () -> () in
-            block()
-        })
-        #endif
-    }
-    
     open override func loop() {
         if let client = self.client() {
             lock.lock { clients.append(client) }
             queue.async {
                 defer { client.stop() }
                 while !client.closed {
-                    self.autorelease {
+                    NetworkThread.autorelease {
                         if let message = client.read() {
                             guard let response = try? self.model.perform(request: message) else { return client.stop() }
                             guard client.write(response) else { return client.stop() }
