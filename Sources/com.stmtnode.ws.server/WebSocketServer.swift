@@ -141,7 +141,7 @@ open class WebSocketServer: NetworkThread {
 extension NetworkClient {
     
     public func readWsRequest() -> [String: String]? {
-        let sb = StringBuilder()
+        let sb = Code()
         while true {
             guard let byte = read() else { return nil }
             sb.append(String(Character(UnicodeScalar(byte))))
