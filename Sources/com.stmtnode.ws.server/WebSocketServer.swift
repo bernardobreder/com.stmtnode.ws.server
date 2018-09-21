@@ -141,14 +141,14 @@ open class WebSocketServer: NetworkThread {
 extension NetworkClient {
     
     public func readWsRequest() -> [String: String]? {
-        let sb = Code()
+        let code = Code()
         while true {
             guard let byte = read() else { return nil }
-            sb.append(String(Character(UnicodeScalar(byte))))
-            if sb.string.hasSuffix("\r\n\r\n") { break }
+            code.append(String(Character(UnicodeScalar(byte))))
+            if code.string.hasSuffix("\r\n\r\n") { break }
         }
         var headers = [String: String]()
-        for line in sb.string.trimmingCharacters(in: .newlines).split(separator: "\r\n").dropFirst() {
+        for line in code.string.trimmingCharacters(in: .newlines).split(separator: "\r\n").dropFirst() {
             guard let index = line.index(of: ":") else { return nil }
             let key = line[..<index].trimmingCharacters(in: .whitespaces)
             let value = line[line.index(index, offsetBy: 2)...].trimmingCharacters(in: .whitespaces)
