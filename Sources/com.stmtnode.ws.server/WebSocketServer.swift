@@ -42,10 +42,9 @@ open class WebSocketServer: NetworkThread {
                         if let message = client.read() {
                             guard let response = try? self.model.perform(request: message) else { return client.stop() }
                             guard client.write(response) else { return client.stop() }
-                        } else {
-                            Thread.sleep(forTimeInterval: 0.1)
                         }
                     }
+                    Thread.sleep(forTimeInterval: 0.1)
                 }
                 self.lock.lock {
                     if let index = self.clients.index(where: {$0 === client}) {
