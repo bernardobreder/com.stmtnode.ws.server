@@ -37,14 +37,20 @@ open class WebSocketServer: NetworkThread {
             lock.lock { clients.append(client) }
             queue.async {
                 defer { client.stop() }
+                var counter = 10.0
                 while !client.closed {
-                    NetworkThread.autorelease {
-                        if let message = client.read() {
+                    if let message = client.read() {
+                        NetworkThread.autorelease {
                             guard let response = try? self.model.perform(request: message) else { return client.stop() }
                             guard client.write(response) else { return client.stop() }
                         }
+                        counter = 10.0
                     }
                     Thread.sleep(forTimeInterval: 0.1)
+                    counter -= 0.1
+                    if counter <= 0 {
+                        client.stop()
+                    }
                 }
                 self.lock.lock {
                     if let index = self.clients.index(where: {$0 === client}) {
