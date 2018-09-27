@@ -5,6 +5,7 @@ import com_stmtnode_net
 import com_stmtnode_secure
 import com_stmtnode_string
 import com_stmtnode_lock
+import com_stmtnode_pm
 #endif
 
 //public protocol WebSocketProtocol {
